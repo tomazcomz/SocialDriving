@@ -10,34 +10,37 @@ from agentic.Agent import Agent
 
 
 class MultiHighway(Env):
-    def __init__(self,agents:list[Agent]):
+    def __init__(self,num_agents:int):
         env=gymnasium.make(
             "highway-v0",
             render_mode="rgb_array",
             config={
-                "controlled_vehicles": 5,  # Five controlled vehicles
-                "vehicles_count": 0,      
+                "controlled_vehicles": num_agents,  # Five controlled vehicles
+                "vehicles_count": 0,
+                "observation": {
+                "type": "GrayscaleObservation",
+                "observation_shape": (60, 30),
+                "stack_size": 1,
+                "weights": [0.2989, 0.5870, 0.1140],  # weights for RGB conversion
+                "scaling": 1.75,
+                },
+
+                "action":{
+                    "type":"MultiAgentAction",
+                    "action_config": {
+                        "type": "ContinuousAction",
+                    }
+                }      
             }
         )
 
         env.unwrapped.config.update({
-            "observation": {
-            "type": "GrayscaleObservation",
-            "observation_shape": (60, 30),
-            "stack_size": 1,
-            "weights": [0.2989, 0.5870, 0.1140],  # weights for RGB conversion
-            "scaling": 1.75,
-            },
-
-            "action":{
-                "type":"MultiAgentAction",
-                "action_config": {
-                    "type": "ContinuousAction",
-                }
-            }
+            
         })
 
         self.env=env
+    
+    def set_agents(self,agents:list[Agent]):
         self.agents=agents
 
     def step(self, action:dict):

@@ -6,6 +6,12 @@ def add_default_args(parser):
         help="Name of the environment to use.",
     )
     parser.add_argument(
+        "--render_env",
+        type=bool,
+        default=False,
+        help="Render env at iteration.",
+    )
+    parser.add_argument(
         "--algorithm",
         type=str,
         default="PPO",

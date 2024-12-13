@@ -13,6 +13,8 @@ INPUT_SHAPE=[60,30,3]
 
 CONV_CONFIG=[6,[12,6],1]
 
+CONV_OUT=[49, 25, 6]
+
 
 class BaselineTorchModel(nn.Module):
     def __init__(
@@ -21,7 +23,7 @@ class BaselineTorchModel(nn.Module):
         action_space: gym.spaces.Space,
         num_outputs: int,
         name: str,):
-        super(BaselineTorchModel, self).__init__()
+        super(BaselineTorchModel, self).__init__(obs_space,action_space,num_outputs,name)
         filters = CONV_CONFIG
 
         camadas=[]
