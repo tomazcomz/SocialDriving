@@ -1,8 +1,21 @@
+import argparse
+
 import gymnasium
 import highway_env
 import torch
 
+from zeus.monitor import ZeusMonitor
+
+from envs.MultiHighway import MultiHighway
 from models.BaselineTorchModel import BaselineTorchModel
+from metrics.rewards import compute_influence_reward
+from agentic.BaselineAgent import BaselineAgent
+
+from utils.default_args import add_default_args
+
+parser = argparse.ArgumentParser()
+add_default_args(parser)
+
 
 # if GPU is to be used
 device = torch.device(
@@ -14,39 +27,27 @@ device = torch.device(
 print("using ", device)
 
 
-def get_action(state,model:BaselineTorchModel):
-    with torch.no_grad():
-        return model.forward(state).max(1).indices.view(1,1)
-
-def routine(num_episodes):
-    env=gymnasium.make(
-        "highway-v0",
-        render_mode="rgb_array",
-        config={
-            "controlled_vehicles": 5,  # Five controlled vehicles
-            "vehicles_count": 2,      
-        }
-    )
-
-    env.unwrapped.config.update({
-        "observation": {
-        "type": "GrayscaleObservation",
-        "observation_shape": (60, 30),
-        "stack_size": 1,
-        "weights": [0.2989, 0.5870, 0.1140],  # weights for RGB conversion
-        "scaling": 1.75,
-        },
-
-        "action":{
-            "type":"MultiAgentAction",
-            "action_config": {
-                "type": "ContinuousAction",
-            }
-        }
-    })
+def routine(num_episodes,config):
+    if config["model"]=="baseline":
+        agent_type=BaselineAgent
+        model_type=BaselineTorchModel
+    agents=[]
+    for i in range(config["num_agents"]):
+        agents.append(agent_type(model_type,f"agent_{i}",obs_space,action_space,num_outputs,device))
+    env=MultiHighway(agents)
 
 
 
     for ep in range(num_episodes):
         env.reset(seed=0)
+
+
+
+
+
+        if config["render_env"] is True:
+            env.render()
+
         
+if __name__ == "__main__":
+    parsed_args = parser.parse_args()

@@ -15,6 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 import argparse
 import os
 from glob import glob
+from metrics.rewards import compute_influence_reward
 
 
 env = gymnasium.make('intersection-v1', render_mode=None)
@@ -221,32 +222,6 @@ def optimize_model(policy_net, optimizer, memory):
     optimizer.step()
 
 
-def compute_influence_reward(state, next_state, actions):
-    """Compute the influence reward for each agent."""
-    influence_rewards = {}
-    for i in range(n_agents):
-        other_agents = [j for j in range(n_agents) if j != i]
-        original_action_dists = {
-            j: torch.softmax(agents[j](state[j]), dim=-1) for j in other_agents
-        }
-        counterfactual_dists = {j: [] for j in other_agents}
-
-        for counterfactual_action in range(n_actions):
-            for j in other_agents:
-                counterfactual_logits = agents[j](state[j]).clone()
-                counterfactual_logits[0, counterfactual_action] += 1e-6
-                counterfactual_dists[j].append(torch.softmax(counterfactual_logits, dim=-1))
-
-        total_influence = 0.0
-        for j in other_agents:
-            counterfactual_mean_dist = torch.stack(counterfactual_dists[j]).mean(0)
-            kl_div = torch.sum(
-                original_action_dists[j] * torch.log(original_action_dists[j] / (counterfactual_mean_dist + 1e-9))
-            )
-            total_influence += kl_div.item()
-
-        influence_rewards[i] = total_influence
-    return influence_rewards
 
 starting_episode = 0
 num_episodes = 100000
