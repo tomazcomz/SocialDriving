@@ -3,31 +3,35 @@ import gymnasium as gym
 import torch
 from torch import nn
 import torch.nn.functional as F
-import torch.optim as optim
+from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+
+from torchsummary import summary
+
 
 
 FCNET_HIDDENS = [32, 32]
 LSTM_CELL_SIZE = 128
 
-INPUT_SHAPE=[60,30,3]
+INPUT_SHAPE=[1,60,30]
 
-CONV_CONFIG=[6,[12,6],1]
+CONV_CONFIG=[2,[12,6],1]
 
 CONV_OUT=[49, 25, 6]
 
 
-class BaselineTorchModel(nn.Module):
+class BaselineTorchModel(TorchModelV2,nn.Module):
     def __init__(
         self,
         obs_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         num_outputs: int,
         name: str,):
-        super(BaselineTorchModel, self).__init__(obs_space,action_space,num_outputs,name)
+        super(BaselineTorchModel, self).__init__(obs_space,action_space,num_outputs,{},name)
+        nn.Module.__init__(self)
         filters = CONV_CONFIG
 
         camadas=[]
-        in_channels = 3
+        in_channels = 1
         out_channels, kernel, stride = filters
 
         self._convs=nn.Conv2d(in_channels,
@@ -83,13 +87,17 @@ class BaselineTorchModel(nn.Module):
         self._pol_branch=nn.Sequential(*pol_layers)
 
 
-
+        """summary(self._extractor,[1,60,30])
+        summary(self._pol_branch)
+        summary(self._value_branch)"""
+        #print(self._extractor)
 
         
 
 
     def forward(self, state):
         self._features = state
+        self._features = self._features.permute(0, 2, 1, 3)
         conv_out = F.softplus(self._convs(self._features))
         #conv_out=conv_out.permute(0,2,3,1)
         conv_out=nn.Flatten()(conv_out)

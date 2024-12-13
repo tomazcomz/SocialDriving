@@ -34,16 +34,16 @@ def routine(num_episodes,config):
         
     env=MultiHighway(config.num_agents)
     obs_space=env.env.observation_space
-    print(obs_space," obs_space\n\n")
+    #print(obs_space," obs_space\n\n")
     model_action_space=env.env.action_space[0]
-    print(model_action_space," model_act_space\n\n")
-    num_outputs=None
+    #print(model_action_space," model_act_space\n\n")
+    num_outputs=2
     agents=[]
     for i in range(config.num_agents):
-        agents.append(agent_type(model_type,f"agent_{i}",obs_space,model_action_space,num_outputs,device))
+        agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
 
     for ep in range(num_episodes):
-        env.reset(seed=0)
+        env.reset()
         if config.render_env is True:
             env.render()
 

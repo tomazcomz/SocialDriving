@@ -4,7 +4,8 @@ from torch import nn
 import gymnasium as gym
 
 class BaselineAgent(Agent):
-    def __init__(self,name, 
+    def __init__(self,
+        name:str, 
         model:nn.Module,
         obs_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
