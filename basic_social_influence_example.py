@@ -114,7 +114,7 @@ class PolicyNetwork(nn.Module):
     
 
 #hyperparameters and utilities
-BATCH_SIZE = 10
+BATCH_SIZE = 128
 GAMMA = 0.99
 EPS_START = 0.9
 EPS_END = 0.05
@@ -130,6 +130,7 @@ render_env = False
 agents = {i: PolicyNetwork(n_observations, n_actions) for i in range(n_agents)}
 optimizers = {i: optim.Adam(agents[i].parameters(), lr=1e-3) for i in range(n_agents)}
 agent_memories = {i : ReplayMemory(10000) for i in range(n_agents)}
+losses = {i: None for i in range(n_agents)}
 
 
 # in case you want to add arguments:
@@ -177,7 +178,9 @@ episode_rewards = []
 def optimize_model(policy_net, optimizer, memory):
     target_net = policy_net
     if len(memory) < BATCH_SIZE:
+        print("not enough transitions")
         return
+    print("optimizing")
     transitions = memory.sample(BATCH_SIZE)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
@@ -212,7 +215,7 @@ def optimize_model(policy_net, optimizer, memory):
 
     # Compute Huber loss
     criterion = nn.SmoothL1Loss()
-    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(1))
+    loss = criterion(state_action_values, expected_state_action_values.unsqueeze(0))
 
     # Optimize the model
     optimizer.zero_grad()
@@ -220,6 +223,7 @@ def optimize_model(policy_net, optimizer, memory):
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    return loss
 
 
 
@@ -229,8 +233,6 @@ num_episodes = 100000
 for i_episode in range(starting_episode, num_episodes):
     # Initialize the environment and get its state
     states, info = env.reset()
-    print(states[0].flatten().shape)
-    print(states[0])
     print(f"running episode {i_episode}: ")
 
     episode_reward = 0
@@ -240,7 +242,6 @@ for i_episode in range(starting_episode, num_episodes):
         actions_tuple = tuple()
 
         for i_state in range(len(states)):
-            print(states[i_state])
             policy_net_action, action = select_action(states[i_state], agents[i_state])
             if not policy_net_action:
                 actions_tuple = action
@@ -251,12 +252,10 @@ for i_episode in range(starting_episode, num_episodes):
         print(actions_tuple)
 
         observation, reward, terminated, truncated, info = env.step(actions_tuple)
-        #print("got reward ", reward)
+        print("got reward ", reward)
         episode_reward+=reward
         reward_t = torch.tensor([reward], dtype=torch.float32, device=device)
         done = terminated or truncated
-        if render_env is True:
-            env.render()
 
         if terminated:
             next_states = None
@@ -276,13 +275,7 @@ for i_episode in range(starting_episode, num_episodes):
 
         # Perform one step of the optimization (on the policy network)
         for i_agent in agents:
-            loss = optimize_model(agents[i_agent], optimizers[i_agent], agent_memories[i_agent])
-
-        # Log metrics to tensorboard
-        writer.add_scalar('Training/Episode Duration', t + 1, i_episode)
-        writer.add_scalar('Training/Episode Reward', reward, i_episode)
-        if loss is not None:
-            writer.add_scalar('Training/Loss', loss.item(), i_episode)
+            losses[i_agent] = optimize_model(agents[i_agent], optimizers[i_agent], agent_memories[i_agent])
 
         if done:
             episode_durations.append(t + 1)
@@ -291,50 +284,42 @@ for i_episode in range(starting_episode, num_episodes):
             # plot_rewards()
             print(f"episode finished with {t+1} steps")
             break
+    
+    # Log metrics to tensorboard
+    writer.add_scalar('Training/Episode Duration', t + 1, i_episode)
+    writer.add_scalar('Training/Episode Reward', episode_reward, i_episode)
+    for i_agent in range(n_agents):
+        if losses[i_agent] is not None:
+            writer.add_scalar(f'Training/Loss Agent {i_agent}', losses[i_agent].item(), i_episode)
         
 
-        # # Save models and data every 1000 episodes
-        # if (i_episode + 1) % 500 == 0:
-        #     # Save model parameters using PyTorch
-        #     model_save_path = f"saved_models/"+"model_"+model_name+date.today().strftime('%Y-%m-%d')+"_episode_"+str(i_episode)+".pt"
-        #     torch.save({
-        #         'episode': i_episode,
-        #         'policy_net_state_dict': policy_net.state_dict(),
-        #         'target_net_state_dict': target_net.state_dict(),
-        #         'optimizer_state_dict': optimizer.state_dict(),
-        #         'episode_rewards': episode_rewards,
-        #         'episode_durations': episode_durations
-        #     }, model_save_path)
-            
-        #     print(f"Saved checkpoint at episode {i_episode+1}")
+        # Save models and data every 1000 episodes
+        if (i_episode + 1) % 500 == 0:
+            # Save model parameters using PyTorch
+            for n_agent in range(n_agents):
+                model_save_path = "saved_models/"+"model_"+model_name+"agent "+str(n_agent)+" "+date.today().strftime('%Y-%m-%d')+"_episode_"+str(i_episode)+".pt"
+                torch.save({
+                    'episode': i_episode,
+                    'agent_policy_net_state_dict': agents[n_agent].state_dict(),
+                    'optimizer_state_dict': optimizers[n_agent].state_dict(),
+                    'episode_rewards': episode_rewards,
+                    'episode_durations': episode_durations
+                }, model_save_path)
+                
+                print(f"Saved checkpoint at episode {i_episode+1}")
         
-        # if (i_episode)==0:
-        #     # Save model parameters using PyTorch
-        #     model_save_path = f"saved_models/sanity_check_model" + date.today().strftime('%Y-%m-%d') + ".pt"
-        #     torch.save({
-        #         'episode': i_episode,
-        #         'policy_net_state_dict': policy_net.state_dict(),
-        #         'target_net_state_dict': target_net.state_dict(),
-        #         'optimizer_state_dict': optimizer.state_dict(),
-        #         'episode_rewards': episode_rewards,
-        #         'episode_durations': episode_durations
-        #     }, model_save_path)
+        if (i_episode)==0:
+            # Save model parameters using PyTorch
+            model_save_path = f"saved_models/sanity_check_model" + date.today().strftime('%Y-%m-%d') + ".pt"
+            torch.save({
+                'episode': i_episode,
+                'policy_net_state_dict': agents[0].state_dict(), #first agent picked arbitrarily
+                'optimizer_state_dict': optimizers[0].state_dict(),
+                'episode_rewards': episode_rewards,
+                'episode_durations': episode_durations
+            }, model_save_path)
             
-        #     print(f"Saved checkpoint at episode {i_episode+1}")
+            print(f"Saved checkpoint at episode {i_episode+1}")
 
 
 print('Complete')
-plot_durations(show_result=True)
-plt.ioff()
-plt.show()
-
-# Plot final metrics
-plt.figure(figsize=(12, 4))
-
-# Save final metrics
-final_metrics_path = f"final_metrics.pkl"
-with open(final_metrics_path, 'wb') as f:
-    pickle.dump({
-        'episode_durations': episode_durations,
-        'episode_rewards': episode_rewards
-    }, f)
