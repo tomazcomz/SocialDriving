@@ -15,8 +15,8 @@ class MultiHighway(Env):
             "highway-v0",
             render_mode="rgb_array",
             config={
-                "controlled_vehicles": num_agents,  # Five controlled vehicles
-                "vehicles_count": 0,
+                "controlled_vehicles": 5,  # Five controlled vehicles
+                "vehicles_count": 1,
                 "observation": {
                 "type": "GrayscaleObservation",
                 "observation_shape": (60, 30),
@@ -66,3 +66,24 @@ class MultiHighway(Env):
     
     def with_agent_groups(self):
         return super(MultiAgentEnv).with_agent_groups()
+    
+    @property
+    def observation_space(self):
+        return self.env.observation_space
+    
+    @property
+    def action_space(self):
+        return self.env.action_space
+    
+    @property 
+    def reward_key(self):
+        return [('agents', 'reward')]
+    
+    @property
+    def action_key(self):
+        return [('agents', 'action')]
+
+
+# DEPRECATED RAY MODULE
+def multi_highway_env_creator(num_agents:int):
+    return MultiHighway(num_agents)

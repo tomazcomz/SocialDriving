@@ -8,7 +8,7 @@ class Agent:
         action_space: gym.spaces.Space,
         num_outputs: int,
         ):
-        self.model=model(obs_space,action_space,num_outputs,name)
+        self.model=model(obs_space,action_space,num_outputs,{},name)
         self.name=name
 
     

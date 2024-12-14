@@ -6,12 +6,18 @@ import torch
 
 from zeus.monitor import ZeusMonitor
 
-from envs.MultiHighway import MultiHighway
+from envs.MultiHighway import MultiHighway, multi_highway_env_creator
 from models.BaselineTorchModel import BaselineTorchModel
 from metrics.rewards import compute_influence_reward
 from agentic.BaselineAgent import BaselineAgent
+from agentic.algorithms import TorchPPO
 
 from utils.default_args import add_default_args
+
+import ray
+from ray.rllib.algorithms import ppo
+from ray.rllib.models import ModelCatalog
+from ray.tune.registry import register_env
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)
@@ -25,6 +31,29 @@ device = torch.device(
 )
 
 print("using ", device)
+
+
+def ray_routine(num_episodes,config):
+    ModelCatalog.register_custom_model("baseline_model",BaselineTorchModel)
+    register_env("multi_highway",multi_highway_env_creator)
+
+    ray.init()
+    ppo_conf=(ppo.PPOConfig()
+        .api_stack( enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
+        .environment("multi_highway",env_config={"num_agents":5})
+        .framework("torch")
+        .training(
+            model={
+                "custom_model":"baseline_model",
+                "custom_model_config":{}
+            },
+            optimizer={"type":torch.optim.Adam,"learning_rate":config.lr}
+            )
+        )
+    mappo=ppo_conf.build()
+    mappo.train()
+
+    # THIS METHOD HAS BEEN DEPRECATED BECAUSE OF RLLIB NOT WORKING PROPERLY
 
 
 def routine(num_episodes,config):
@@ -41,6 +70,8 @@ def routine(num_episodes,config):
     agents=[]
     for i in range(config.num_agents):
         agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
+
+    mappo=TorchPPO(env.env,device,)
 
     for ep in range(num_episodes):
         env.reset()

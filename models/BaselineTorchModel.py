@@ -25,8 +25,9 @@ class BaselineTorchModel(TorchModelV2,nn.Module):
         obs_space: gym.spaces.Space,
         action_space: gym.spaces.Space,
         num_outputs: int,
-        name: str,):
-        super(BaselineTorchModel, self).__init__(obs_space,action_space,num_outputs,{},name)
+        config={},
+        name: str=None):
+        super(BaselineTorchModel, self).__init__(obs_space,action_space,num_outputs,config,name)
         nn.Module.__init__(self)
         filters = CONV_CONFIG
 

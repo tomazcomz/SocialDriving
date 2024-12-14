@@ -254,7 +254,6 @@ for i_episode in range(starting_episode, num_episodes):
         observation, reward, terminated, truncated, info = env.step(actions_tuple)
         print("got reward ", reward)
         episode_reward+=reward
-        reward_t = torch.tensor([reward], dtype=torch.float32, device=device)
         done = terminated or truncated
 
         if terminated:
@@ -268,7 +267,7 @@ for i_episode in range(starting_episode, num_episodes):
                 next_state = torch.tensor([next_states[i_agent].flatten()], device=device)
             else:
                 next_state = None
-            agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([reward_t], device=device))        
+            agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([reward], device=device))        
 
         # Move to the next state
         states = next_states
