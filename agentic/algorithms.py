@@ -31,6 +31,8 @@ class ReplayMemory(object):
     def __len__(self):
         return len(self.memory)
 
+    def __repr__(self):
+        return f"ReplayMemory(capacity={len(self.memory)}, contents={list(self.memory)})"
 
 
 class MAPPO():
@@ -69,8 +71,11 @@ class MAPPO():
                     next_state = None
                 agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([reward], device=device))        
             states = next_states
-            #if self.config.render:
-                #env.render()
+            if steps>=max_steps:
+                break
+            if self.config.render:
+                env.render()
+            print(f"Step {steps} done")
         return agent_memories,steps
 
 
@@ -83,14 +88,21 @@ class MAPPO():
         episode_durations = []
         episode_rewards = []
         for ep in range(num_episodes):
+            print(f"Starting episode {ep}")
             memories,t=self.rollout(self.env,max_steps,agents,self.device)
+            print(f"Rollout done")
+            print(f"Memories: {memories}")
             optimizers = {agent: optim.Adam(agent.model.parameters(), lr=self.config.lr) for agent in agents}
             old_policies={agent:agent.model for agent in agents}
-            for replay,agent in zip(memories,agents):
+            for replay,agent in zip(memories.values(),agents):
                 # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
                 # detailed explanation). This converts batch-array of Transitions
                 # to Transition of batch-arrays.
-                batch = Transition(*zip(*replay.memory))
+                print("Replay: ",replay)
+                print("Replay memory length: ",len(replay.memory))
+                print("Replay content: ",replay.memory)
+
+                batch = Transition(*zip(*[(t.state, t.action, t.next_state, t.reward) for t in replay.memory]))
 
                 non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                             batch.next_state)), device=self.device, dtype=torch.bool)
@@ -103,6 +115,10 @@ class MAPPO():
                 # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
                 # columns of actions taken. These are the actions which would've been taken
                 # for each batch state according to policy_net
+
+                print("State batch: ",state_batch)
+                print("Action batch: ",action_batch)
+
                 state_action_values = agent.model.forward(state_batch).gather(1, action_batch.unsqueeze(0))
 
                 # Compute V(s_{t+1}) for all next states.

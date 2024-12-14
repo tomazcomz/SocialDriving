@@ -60,7 +60,7 @@ def routine(num_episodes,config):
     if config.model=="baseline":
         agent_type=BaselineAgent
         model_type=BaselineTorchModel
-        
+                
     env=MultiHighway(config.num_agents)
     obs_space=env.env.observation_space
     #print(obs_space," obs_space\n\n")
@@ -72,7 +72,7 @@ def routine(num_episodes,config):
         agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
 
     mappo=MAPPO(env.env,device,config)
-    mappo.train(num_episodes,1000,agents)
+    mappo.train(num_episodes,30,agents)
     
 
     
