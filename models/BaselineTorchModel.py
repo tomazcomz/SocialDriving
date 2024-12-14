@@ -110,9 +110,14 @@ class BaselineTorchModel(TorchModelV2,nn.Module):
         assert self._features is not None, "must call forward() first"
         return F.softmax(self._pol_branch(self._features))
 
-    def value_function(self):
+    def value_function(self,state=None):
         assert self._features is not None, "must call forward() first"
-        val=F.tanh(self._value_branch(self._features))
+        if state==None:
+            val=F.tanh(self._value_branch(self._features))
+        else:
+            state=torch.tensor(state,dtype=torch.float32)
+            extracted=self._extractor(state)
+            val=F.tanh(self._value_branch(extracted))
         while len(val.shape)>1:
             val=val[0]
         return val

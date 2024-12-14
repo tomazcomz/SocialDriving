@@ -43,6 +43,12 @@ def add_default_args(parser):
         "defaults to num_workers * num_envs_per_worker * rollout_fragment_length",
     )
     parser.add_argument(
+        "--rollout_max_steps",
+        type=int,
+        default=100,
+        help="rollout max_steps",
+    )
+    parser.add_argument(
         "--checkpoint_frequency",
         type=int,
         default=100,

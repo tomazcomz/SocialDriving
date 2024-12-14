@@ -72,7 +72,7 @@ def routine(num_episodes,config):
         agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
 
     mappo=MAPPO(env.env,device,config)
-    mappo.train(num_episodes,1000,agents)
+    mappo.train(num_episodes,config.rollout_max_steps,agents)
     
 
     
