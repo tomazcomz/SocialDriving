@@ -233,6 +233,7 @@ starting_episode = 0
 num_episodes = 100000
 
 monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()] if device.type == 'cuda' else None, approx_instant_energy = True)
+cumulative_episode_consumption = 0
 
 for i_episode in range(starting_episode, num_episodes):
     # begin ZeusMonitor window for episode
@@ -309,11 +310,13 @@ for i_episode in range(starting_episode, num_episodes):
 
     # end ZeusMonitor window for episode
     ep_z = monitor.end_window("episode")
-    
+    cumulative_episode_consumption += ep_z.total_energy
+
     # Log metrics to tensorboard
     writer.add_scalar('Training/Episode Duration', t + 1, i_episode)
     writer.add_scalar('Training/Episode Mean Reward', episode_reward, i_episode)
-    writer.add_scalar('Episode Energy (J) Consumption', ep_z.total_energy, i_episode)
+    writer.add_scalar('Zeus/Episode Energy (J) Consumption', ep_z.total_energy, i_episode)
+    writer.add_scalar('Zeus/Total Energy (J) Consumption', cumulative_episode_consumption    , i_episode)
 
     for i_agent in range(n_agents):
         if losses[i_agent] is not None:
