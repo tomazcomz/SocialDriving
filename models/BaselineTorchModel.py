@@ -16,7 +16,7 @@ INPUT_SHAPE=[1,60,30]
 
 CONV_CONFIG=[2,[12,6],1]
 
-CONV_OUT=[49, 25, 6]
+CONV_OUT=[49, 25, 2]
 
 
 class BaselineTorchModel(TorchModelV2,nn.Module):
@@ -97,10 +97,10 @@ class BaselineTorchModel(TorchModelV2,nn.Module):
 
 
     def forward(self, state):
-        self._features = state
-        self._features = self._features.permute(0, 2, 1, 3)
-        conv_out = F.softplus(self._convs(self._features))
-        #conv_out=conv_out.permute(0,2,3,1)
+        self._features = torch.tensor(state,dtype=torch.float32)
+        #print(self._features.shape)
+        conv_out = self._convs(self._features)
+        conv_out=F.softplus(conv_out)
         conv_out=nn.Flatten()(conv_out)
         self._features=F.softplus(self._fc_d(F.softplus(self._fc_o(conv_out))))
         model_out=self.policy()

@@ -18,6 +18,5 @@ class BaselineAgent(Agent):
         # Did not implement e-greedy porque assumimos que há exploração
         self.model.to(self.device)
         with torch.no_grad():
-            state = state.flatten()
             state = torch.tensor(state, device=self.device)
-            return torch.argmax(self.model.forward(state)).item()
+            return self.model.forward(state).cpu().numpy()[0]

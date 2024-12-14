@@ -15,14 +15,18 @@ class MultiHighway(Env):
             "highway-v0",
             render_mode="rgb_array",
             config={
-                "controlled_vehicles": 5,  # Five controlled vehicles
-                "vehicles_count": 1,
+                "controlled_vehicles": num_agents,  # Five controlled vehicles
+                "initial_vehicle_count": 0,
                 "observation": {
+                "vehicles_count": num_agents,
+                "type": "MultiAgentObservation",
+                "observation_config": {
                 "type": "GrayscaleObservation",
                 "observation_shape": (60, 30),
                 "stack_size": 1,
                 "weights": [0.2989, 0.5870, 0.1140],  # weights for RGB conversion
                 "scaling": 1.75,
+                }
                 },
 
                 "action":{
@@ -32,6 +36,7 @@ class MultiHighway(Env):
                     }
                 }      
             }
+            
         )
 
         env.unwrapped.config.update({

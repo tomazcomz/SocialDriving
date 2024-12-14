@@ -46,7 +46,7 @@ class MAPPO():
     
     def rollout(self,env:gym.Env,max_steps:int,agents:list[Agent],device:torch.device)->ReplayMemory:
         states, info = env.reset()
-        print(len(states[0]),len(states[0][0]))
+        #print(states)
         agent_memories = {i : ReplayMemory(10000) for i in range(len(states))}
         terminated=False
         actions_tuple = tuple()
@@ -55,7 +55,8 @@ class MAPPO():
         while not terminated:
             steps+=1
             for i_state in range(len(states)):
-                actions_tuple = actions_tuple + (agents[i_state].action(states[i_state]), )
+                actions_tuple = actions_tuple + (agents[i_state].action([states[i_state]]), )
+
             observation, reward, terminated, truncated, info = env.step(actions_tuple)
             episode_reward+=reward
             done = terminated or truncated
@@ -68,8 +69,8 @@ class MAPPO():
                     next_state = None
                 agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([reward], device=device))        
             states = next_states
-            if self.config.render:
-                env.render()
+            #if self.config.render:
+                #env.render()
         return agent_memories,steps
 
 
