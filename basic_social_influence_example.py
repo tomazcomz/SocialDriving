@@ -178,9 +178,9 @@ episode_rewards = []
 def optimize_model(policy_net, optimizer, memory):
     target_net = policy_net
     if len(memory) < BATCH_SIZE:
-        print("not enough transitions")
+        #print("not enough transitions")
         return
-    print("optimizing")
+    #print("optimizing")
     transitions = memory.sample(BATCH_SIZE)
     # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
     # detailed explanation). This converts batch-array of Transitions
@@ -229,7 +229,7 @@ def optimize_model(policy_net, optimizer, memory):
 
 starting_episode = 0
 num_episodes = 100000
-monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()])
+monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()], approx_instant_energy = True)
 
 
 for i_episode in range(starting_episode, num_episodes):
@@ -259,7 +259,7 @@ for i_episode in range(starting_episode, num_episodes):
         # begin ZeusMonitor window for step
         step_z = monitor.begin_window("step")
         observation, reward, terminated, truncated, info = env.step(actions_tuple)
-        print("got reward ", reward)
+        #print("got reward ", reward)
         episode_reward+=reward
         done = terminated or truncated
 
