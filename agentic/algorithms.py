@@ -75,7 +75,6 @@ class MAPPO():
             states = next_states
             #if self.config.render:
                 #env.render()
-            #print(steps)
         return agent_memories,steps
 
 
@@ -88,16 +87,15 @@ class MAPPO():
         episode_durations = []
         episode_rewards = []
         for ep in range(num_episodes):
+            print(f"Starting episode {ep}")
             memories,t=self.rollout(self.env,max_steps,agents,self.device)
-            #print(memories)
             optimizers = {agent: optim.Adam(agent.model.parameters(), lr=self.config.lr) for agent in agents}
             old_policies={agent:agent.model for agent in agents}
-            for replay,agent in zip(memories.values(),agents):
-                #print(type(replay))
+            for replay,agent in zip(memories,agents):
                 # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
                 # detailed explanation). This converts batch-array of Transitions
                 # to Transition of batch-arrays.
-                batch = Transition(*zip(*[(t.state, t.action, t.next_state, t.reward) for t in replay.memory]))
+                batch = Transition(*zip(*replay.memory))
 
                 non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                             batch.next_state)), device=self.device, dtype=torch.bool)
@@ -110,9 +108,7 @@ class MAPPO():
                 # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
                 # columns of actions taken. These are the actions which would've been taken
                 # for each batch state according to policy_net
-                action_batch_indices = action_batch.argmax(dim=1).unsqueeze(1)
-                with torch.no_grad():
-                    state_action_values = agent.model.forward(state_batch).gather(1, action_batch_indices)
+                state_action_values = agent.model.forward(state_batch).gather(1, action_batch.unsqueeze(0))
 
                 # Compute V(s_{t+1}) for all next states.
                 # Expected values of actions for non_final_next_states are computed based

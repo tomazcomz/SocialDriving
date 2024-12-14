@@ -60,7 +60,7 @@ def routine(num_episodes,config):
     if config.model=="baseline":
         agent_type=BaselineAgent
         model_type=BaselineTorchModel
-        
+                
     env=MultiHighway(config.num_agents)
     obs_space=env.env.observation_space
     #print(obs_space," obs_space\n\n")
