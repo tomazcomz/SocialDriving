@@ -16,7 +16,7 @@ import argparse
 import os
 from glob import glob
 from metrics.rewards import compute_influence_reward
-
+from zeus.monitor import ZeusMonitor
 
 env = gymnasium.make('intersection-v1', render_mode=None)
 
@@ -229,8 +229,13 @@ def optimize_model(policy_net, optimizer, memory):
 
 starting_episode = 0
 num_episodes = 100000
+monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()])
+
 
 for i_episode in range(starting_episode, num_episodes):
+    # begin ZeusMonitor window for episode
+    monitor.begin_window("episode")
+
     # Initialize the environment and get its state
     states, info = env.reset()
     print(f"running episode {i_episode}: ")
@@ -250,7 +255,9 @@ for i_episode in range(starting_episode, num_episodes):
                 actions_tuple = actions_tuple + (action, )
         
         print(actions_tuple)
-
+        
+        # begin ZeusMonitor window for step
+        step_z = monitor.begin_window("step")
         observation, reward, terminated, truncated, info = env.step(actions_tuple)
         print("got reward ", reward)
         episode_reward+=reward
@@ -276,6 +283,9 @@ for i_episode in range(starting_episode, num_episodes):
         for i_agent in agents:
             losses[i_agent] = optimize_model(agents[i_agent], optimizers[i_agent], agent_memories[i_agent])
 
+        # end ZeusMonitor window for step
+        monitor.end_window("step")
+
         if done:
             episode_durations.append(t + 1)
             episode_rewards.append(episode_reward)
@@ -283,10 +293,14 @@ for i_episode in range(starting_episode, num_episodes):
             # plot_rewards()
             print(f"episode finished with {t+1} steps")
             break
-    
+
+    # end ZeusMonitor window for episode
+    ep_z = monitor.end_window("episode")
+
     # Log metrics to tensorboard
     writer.add_scalar('Training/Episode Duration', t + 1, i_episode)
     writer.add_scalar('Training/Episode Reward', episode_reward, i_episode)
+    writer.add_scalar('Episode Energy (J) Consumption', ep_z.total_energy, i_episode)
     for i_agent in range(n_agents):
         if losses[i_agent] is not None:
             writer.add_scalar(f'Training/Loss Agent {i_agent}', losses[i_agent].item(), i_episode)
