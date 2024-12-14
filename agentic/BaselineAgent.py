@@ -20,4 +20,4 @@ class BaselineAgent(Agent):
         with torch.no_grad():
             state = state.flatten()
             state = torch.tensor(state, device=self.device)
-            return torch.argmax(self.model(state)).item()
+            return torch.argmax(self.model.forward(state)).item()

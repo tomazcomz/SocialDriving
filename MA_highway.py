@@ -10,7 +10,7 @@ from envs.MultiHighway import MultiHighway, multi_highway_env_creator
 from models.BaselineTorchModel import BaselineTorchModel
 from metrics.rewards import compute_influence_reward
 from agentic.BaselineAgent import BaselineAgent
-from agentic.algorithms import TorchPPO
+from agentic.algorithms import MAPPO
 
 from utils.default_args import add_default_args
 
@@ -71,12 +71,11 @@ def routine(num_episodes,config):
     for i in range(config.num_agents):
         agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
 
-    mappo=TorchPPO(env.env,device,)
+    mappo=MAPPO(env.env,device,config)
+    mappo.train(num_episodes,1000,agents)
+    
 
-    for ep in range(num_episodes):
-        env.reset()
-        if config.render_env is True:
-            env.render()
+    
 
         
 if __name__ == "__main__":
