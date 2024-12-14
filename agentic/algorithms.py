@@ -17,8 +17,8 @@ warnings.filterwarnings("ignore")
 #replay memory
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 
+#save transitions to memory
 class ReplayMemory(object):
-    memory = None
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
 
