@@ -232,7 +232,7 @@ def optimize_model(policy_net, optimizer, memory):
 starting_episode = 0
 num_episodes = 100000
 
-monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()], approx_instant_energy = True)
+monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()] if device.type == 'cuda' else None, approx_instant_energy = True)
 
 for i_episode in range(starting_episode, num_episodes):
     # begin ZeusMonitor window for episode
