@@ -16,6 +16,7 @@ import argparse
 import os
 from glob import glob
 from metrics.rewards import compute_influence_reward
+from zeus.monitor import ZeusMonitor
 
 
 env = gymnasium.make('intersection-v1', render_mode=None)
@@ -131,6 +132,7 @@ agents = {i: PolicyNetwork(n_observations, n_actions) for i in range(n_agents)}
 optimizers = {i: optim.Adam(agents[i].parameters(), lr=1e-3) for i in range(n_agents)}
 agent_memories = {i : ReplayMemory(10000) for i in range(n_agents)}
 losses = {i: None for i in range(n_agents)}
+rewards = {i: None for i in range(n_agents)}
 
 
 # in case you want to add arguments:
@@ -230,7 +232,11 @@ def optimize_model(policy_net, optimizer, memory):
 starting_episode = 0
 num_episodes = 100000
 
+monitor = ZeusMonitor(gpu_indices=[torch.cuda.current_device()], approx_instant_energy = True)
+
 for i_episode in range(starting_episode, num_episodes):
+    # begin ZeusMonitor window for episode
+    monitor.begin_window("episode")
     # Initialize the environment and get its state
     states, info = env.reset()
     print(f"running episode {i_episode}: ")
@@ -251,10 +257,23 @@ for i_episode in range(starting_episode, num_episodes):
         
         print(actions_tuple)
 
+        # begin ZeusMonitor window for step
+        step_z = monitor.begin_window("step")
         observation, reward, terminated, truncated, info = env.step(actions_tuple)
-        print("got reward ", reward)
+        print(info)
+        #print("got reward ", reward)
+        print("mean reward: ", reward)
+        print(info['agents_rewards'][0])
         episode_reward+=reward
+        reward_t = torch.tensor([reward], dtype=torch.float32, device=device)
         done = terminated or truncated
+
+        #compute influence rewards
+        agent_influence_rewards = compute_influence_reward(agents=agents, state=states, actions=actions_tuple, device=device)
+        print("influence: ", agent_influence_rewards)
+
+        # end ZeusMonitor window for step
+        monitor.end_window("step")
 
         if terminated:
             next_states = None
@@ -262,12 +281,16 @@ for i_episode in range(starting_episode, num_episodes):
             next_states = observation
         
         for i_agent in range(n_agents):
+
+            #assign influenced reward for each agent
+            rewards[i_agent] = info['agents_rewards'][i_agent]+agent_influence_rewards[i_agent]
+
             state = states[i_agent].flatten()
             if next_states is not None:
                 next_state = torch.tensor([next_states[i_agent].flatten()], device=device)
             else:
                 next_state = None
-            agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([reward], device=device))        
+            agent_memories[i_agent].push(torch.tensor([state], device=device), torch.tensor([actions_tuple[i_agent]], device=device), next_state, torch.tensor([rewards[i_agent]], device=device, dtype=torch.float32))        
 
         # Move to the next state
         states = next_states
@@ -283,10 +306,15 @@ for i_episode in range(starting_episode, num_episodes):
             # plot_rewards()
             print(f"episode finished with {t+1} steps")
             break
+
+    # end ZeusMonitor window for episode
+    ep_z = monitor.end_window("episode")
     
     # Log metrics to tensorboard
     writer.add_scalar('Training/Episode Duration', t + 1, i_episode)
-    writer.add_scalar('Training/Episode Reward', episode_reward, i_episode)
+    writer.add_scalar('Training/Episode Mean Reward', episode_reward, i_episode)
+    writer.add_scalar('Episode Energy (J) Consumption', ep_z.total_energy, i_episode)
+
     for i_agent in range(n_agents):
         if losses[i_agent] is not None:
             writer.add_scalar(f'Training/Loss Agent {i_agent}', losses[i_agent].item(), i_episode)
@@ -297,6 +325,8 @@ for i_episode in range(starting_episode, num_episodes):
             # Save model parameters using PyTorch
             for n_agent in range(n_agents):
                 model_save_path = "saved_models/"+"model_"+model_name+"agent "+str(n_agent)+" "+date.today().strftime('%Y-%m-%d')+"_episode_"+str(i_episode)+".pt"
+                if not os.path.exists("saved_models/"):
+                    os.makedirs("saved_models/")
                 torch.save({
                     'episode': i_episode,
                     'agent_policy_net_state_dict': agents[n_agent].state_dict(),
@@ -310,6 +340,8 @@ for i_episode in range(starting_episode, num_episodes):
         if (i_episode)==0:
             # Save model parameters using PyTorch
             model_save_path = f"saved_models/sanity_check_model" + date.today().strftime('%Y-%m-%d') + ".pt"
+            if not os.path.exists("saved_models/"):
+                os.makedirs("saved_models/")
             torch.save({
                 'episode': i_episode,
                 'policy_net_state_dict': agents[0].state_dict(), #first agent picked arbitrarily
