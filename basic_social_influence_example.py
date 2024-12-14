@@ -326,7 +326,7 @@ for i_episode in range(starting_episode, num_episodes):
             for n_agent in range(n_agents):
                 model_save_path = "saved_models/"+"model_"+model_name+"agent "+str(n_agent)+" "+date.today().strftime('%Y-%m-%d')+"_episode_"+str(i_episode)+".pt"
                 if not os.path.exists("saved_models/"):
-                os.makedirs("saved_models/")
+                    os.makedirs("saved_models/")
                 torch.save({
                     'episode': i_episode,
                     'agent_policy_net_state_dict': agents[n_agent].state_dict(),
