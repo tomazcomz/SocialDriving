@@ -90,17 +90,17 @@ class MAPPO():
         for ep in range(num_episodes):
             print(f"Starting episode {ep}")
             memories,t=self.rollout(self.env,max_steps,agents,self.device)
-            print(f"Rollout done")
-            print(f"Memories: {memories}")
+            #print(f"Rollout done")
+            #print(f"Memories: {memories}")
             optimizers = {agent: optim.Adam(agent.model.parameters(), lr=self.config.lr) for agent in agents}
             old_policies={agent:agent.model for agent in agents}
             for replay,agent in zip(memories.values(),agents):
                 # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
                 # detailed explanation). This converts batch-array of Transitions
                 # to Transition of batch-arrays.
-                print("Replay: ",replay)
-                print("Replay memory length: ",len(replay.memory))
-                print("Replay content: ",replay.memory)
+                #print("Replay: ",replay)
+                #print("Replay memory length: ",len(replay.memory))
+                #print("Replay content: ",replay.memory)
 
                 batch = Transition(*zip(*[(t.state, t.action, t.next_state, t.reward) for t in replay.memory]))
 
@@ -116,10 +116,12 @@ class MAPPO():
                 # columns of actions taken. These are the actions which would've been taken
                 # for each batch state according to policy_net
 
-                print("State batch: ",state_batch)
-                print("Action batch: ",action_batch)
+                #print("State batch: ",state_batch)
+                #print("Action batch: ",action_batch)
 
-                state_action_values = agent.model.forward(state_batch).gather(1, action_batch.unsqueeze(0))
+                action_batch_indices = action_batch.argmax(dim=1).unsqueeze(1)
+                state_action_values = agent.model.forward(state_batch).gather(1, action_batch_indices)
+
 
                 # Compute V(s_{t+1}) for all next states.
                 # Expected values of actions for non_final_next_states are computed based
@@ -128,7 +130,7 @@ class MAPPO():
                 # state value or 0 in case the state was final.
                 next_state_values = torch.zeros(len(replay.memory), device=self.device)
                 with torch.no_grad():
-                    next_state_values[non_final_mask] = agent.model.value_fucntion(non_final_next_states).max(1).values
+                    next_state_values[non_final_mask] = agent.model.value_function(non_final_next_states).max(1).values
                 # Compute the expected Q values
                 expected_state_action_values = (next_state_values * self.config.gamma) + reward_batch
 
