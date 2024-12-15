@@ -109,6 +109,24 @@ def add_default_args(parser):
         help="Gradients are clipped by this amount per update.",
     )
     parser.add_argument(
+        "--clip",
+        type=float,
+        default=0.2,
+        help="Gradients are clipped by this amount per update.",
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=0.99,
+        help="Q and V discount factor",
+    )
+    parser.add_argument(
+        "--lmbda",
+        type=float,
+        default=0.95,
+        help="lmbda factor",
+    )
+    parser.add_argument(
         "--lr",
         type=float,
         default=0.0001,
@@ -130,6 +148,7 @@ def add_default_args(parser):
         help="Values for the learning rate schedule. Linearly interpolates using "
         "--lr_schedule_steps",
     )
+
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
 

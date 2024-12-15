@@ -91,11 +91,11 @@ class MAPPO():
             memories,t=self.rollout(self.env,max_steps,agents,self.device)
             optimizers = {agent: optim.Adam(agent.model.parameters(), lr=self.config.lr) for agent in agents}
             old_policies={agent:agent.model for agent in agents}
-            for replay,agent in zip(memories,agents):
+            for replay,agent in zip(memories.values(),agents):
                 # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
                 # detailed explanation). This converts batch-array of Transitions
                 # to Transition of batch-arrays.
-                batch = Transition(*zip(*replay.memory))
+                batch = Transition(*zip(*[(t.state, t.action, t.next_state, t.reward) for t in replay.memory]))
 
                 non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                             batch.next_state)), device=self.device, dtype=torch.bool)
@@ -108,7 +108,9 @@ class MAPPO():
                 # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
                 # columns of actions taken. These are the actions which would've been taken
                 # for each batch state according to policy_net
-                state_action_values = agent.model.forward(state_batch).gather(1, action_batch.unsqueeze(0))
+                action_batch_indices = action_batch.argmax(dim=1).unsqueeze(1)
+                state_action_values = agent.model.forward(state_batch).gather(1, action_batch_indices)
+                
 
                 # Compute V(s_{t+1}) for all next states.
                 # Expected values of actions for non_final_next_states are computed based
@@ -117,12 +119,16 @@ class MAPPO():
                 # state value or 0 in case the state was final.
                 next_state_values = torch.zeros(len(replay.memory), device=self.device)
                 with torch.no_grad():
-                    next_state_values[non_final_mask] = agent.model.value_function(non_final_next_states).max(1).values
+                    next_state_values[non_final_mask] = agent.model.value_function(non_final_next_states)
                 # Compute the expected Q values
                 expected_state_action_values = (next_state_values * self.config.gamma) + reward_batch
 
+                
 
-                advantage=state_action_values-expected_state_action_values
+
+
+                advantage=state_action_values.squeeze(1)-expected_state_action_values
+                advantage=advantage.unsqueeze(1)
 
                 critic_criterion = nn.KLDivLoss()
                 critic_loss = critic_criterion(state_action_values, expected_state_action_values.unsqueeze(0))
@@ -134,7 +140,7 @@ class MAPPO():
                 ratios = new_probs / old_probs
 
                 # Unclipped part of the surrogate loss function
-                surr1 = ratios * advantage
+                surr1 = advantage*ratios
 
                 # Clipped part of the surrogate loss function
                 surr2 = torch.clamp(ratios, 1 - self.config.clip, 1 + self.config.clip) * advantage
@@ -143,12 +149,12 @@ class MAPPO():
                 actor_loss = -torch.min(surr1, surr2).mean()
 
                 # Optimization: backward, grad clipping and optimization step
-                actor_loss.backward()
-                critic_loss.backward()
+                actor_loss.backward(retain_graph=True)
+                critic_loss.backward(retain_graph=True)
                 # this is not strictly mandatory but it's good practice to keep
                 # your gradient norm bounded
-                torch.nn.utils.clip_grad_norm_(critic_loss.parameters(), self.config.max_grad_norm)
-                torch.nn.utils.clip_grad_norm_(actor_loss.parameters(), self.config.max_grad_norm)
+                torch.nn.utils.clip_grad_norm_(agent.model._pol_branch.parameters(), self.config.grad_clip)
+                torch.nn.utils.clip_grad_norm_(agent.model._value_branch.parameters(), self.config.grad_clip)
                 optimizers[agent].step()
                 optimizers[agent].zero_grad()
 
