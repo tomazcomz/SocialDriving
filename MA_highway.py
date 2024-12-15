@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import gymnasium
 import highway_env
@@ -34,6 +35,7 @@ print("using ", device)
 
 
 def ray_routine(num_episodes,config):
+    """THIS METHOD HAS BEEN DEPRECATED BECAUSE OF RLLIB NOT WORKING PROPERLY"""
     ModelCatalog.register_custom_model("baseline_model",BaselineTorchModel)
     register_env("multi_highway",multi_highway_env_creator)
 
@@ -53,7 +55,7 @@ def ray_routine(num_episodes,config):
     mappo=ppo_conf.build()
     mappo.train()
 
-    # THIS METHOD HAS BEEN DEPRECATED BECAUSE OF RLLIB NOT WORKING PROPERLY
+    
 
 
 def routine(num_episodes,config):
@@ -71,6 +73,11 @@ def routine(num_episodes,config):
     for i in range(config.num_agents):
         agents.append(agent_type(f"agent_{i}",model_type,obs_space,model_action_space,num_outputs,device))
 
+    if config.load:
+        for agent,model_file in zip(agents,os.listdir(config.load_dir)):
+            checkpoint=torch.load(f'{config.load_dir}/{model_file}',map_location=device)
+            agent.model.load_state_dict(checkpoint['agent_policy_net_state_dict'])
+
     mappo=MAPPO(env.env,device,config)
     mappo.train(num_episodes,config.rollout_max_steps,agents)
     
@@ -80,4 +87,4 @@ def routine(num_episodes,config):
         
 if __name__ == "__main__":
     parsed_args = parser.parse_args()
-    routine(1,parsed_args)
+    routine(parsed_args.num_episodes,parsed_args)

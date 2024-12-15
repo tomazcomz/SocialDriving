@@ -17,7 +17,9 @@ class MultiHighway(Env):
             render_mode="rgb_array",
             config={
                 "controlled_vehicles": num_agents,  # Five controlled vehicles
-                "initial_vehicle_count": 0,
+                "initial_vehicle_count": 20,
+                "simulation_frequency": 15,
+                "colision_reward":-1,
                 "observation": {
                 "vehicles_count": num_agents,
                 "type": "MultiAgentObservation",
@@ -70,7 +72,7 @@ class MultiHighway(Env):
 
     
     def reset(self):
-        return self.env.reset(seed=0)
+        return self.env.reset()
     
     def render(self):
         return self.env.render()

@@ -12,27 +12,22 @@ def add_default_args(parser):
         help="Render env at iteration.",
     )
     parser.add_argument(
-        "--algorithm",
-        type=str,
-        default="PPO",
-        help="Name of the rllib algorithm to use. Can be A3C or PPO.",
-    )
-    parser.add_argument(
         "--model",
         type=str,
         default="baseline",
         help="Name of the model to use. Can be baseline, moa, or scm",
     )
     parser.add_argument(
-        "--resume",
-        action="store_true",
+        "--load",
+        type=bool,
         default=False,
-        help="Resume previous experiment.",
+        help="Load model.",
     )
     parser.add_argument(
-        "--restore",
+        "--load_dir",
+        type=str,
         default=None,
-        help="path to checkpoint",
+        help="Load model directory.",
     )
     parser.add_argument("--num_agents", type=int, default=5, help="Number of agent policies")
     parser.add_argument(
@@ -47,6 +42,12 @@ def add_default_args(parser):
         type=int,
         default=100,
         help="rollout max_steps",
+    )
+    parser.add_argument(
+        "--num_episodes",
+        type=int,
+        default=1,
+        help="Number of episodes per training iteration.",
     )
     parser.add_argument(
         "--checkpoint_frequency",
@@ -79,9 +80,6 @@ def add_default_args(parser):
         default=None,
         help="Amount of memory for the object store",
     )
-    parser.add_argument(
-        "--redis_max_memory", type=int, default=None, help="Amount of memory for redis"
-    )
 
     parser.add_argument("--num_workers", type=int, default=4, help="Total number of workers")
     parser.add_argument(
@@ -97,22 +95,16 @@ def add_default_args(parser):
         "--gpus_per_worker", type=float, default=0, help="Number of GPUs used by one worker"
     )
     parser.add_argument(
-        "--local_mode",
-        action="store_true",
-        default=False,
-        help="Force all the computation onto the driver. Useful for debugging.",
-    )
-    parser.add_argument(
         "--grad_clip",
         type=float,
-        default=40,
+        default=100,
         help="Gradients are clipped by this amount per update.",
     )
     parser.add_argument(
         "--clip",
         type=float,
         default=0.2,
-        help="Gradients are clipped by this amount per update.",
+        help="PPO clip",
     )
     parser.add_argument(
         "--gamma",
@@ -230,21 +222,4 @@ def add_default_args(parser):
         help="This weight balances forward and inverse loss weights in the following way:"
         "weight * forward_loss + (1 - weight) * inverse_loss"
         "Must be in the range [0, 1].",
-    )
-
-    # PPO parameters
-    parser.add_argument(
-        "--ppo_sgd_minibatch_size",
-        type=int,
-        default=None,
-        help="Minibatch size for the stochastic gradient descent step in the PPO algorithm. If not"
-        "specified, defaults to --train_batch_size / 2",
-    )
-
-    # Env-specific parameters
-    parser.add_argument(
-        "--num_switches",
-        type=int,
-        default=6,
-        help="Amount of switches in a switch map environment",
     )

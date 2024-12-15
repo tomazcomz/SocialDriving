@@ -2,6 +2,7 @@ from agentic.Agent import Agent
 import torch
 from torch import nn
 import gymnasium as gym
+import random
 
 class BaselineAgent(Agent):
     def __init__(self,
@@ -20,3 +21,6 @@ class BaselineAgent(Agent):
         with torch.no_grad():
             state = torch.tensor(state, device=self.device)
             return self.model.forward(state).cpu().numpy()[0]
+        
+    def set_model(self,model):
+        self.model=model
