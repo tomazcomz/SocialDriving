@@ -8,6 +8,7 @@ from ray.tune.registry import register_env
 
 from agentic.Agent import Agent
 
+LANES_COUNT=10
 
 class MultiHighway(Env):
     def __init__(self,num_agents:int):
@@ -34,7 +35,11 @@ class MultiHighway(Env):
                     "action_config": {
                         "type": "ContinuousAction",
                     }
-                }      
+                },
+                "offroad_terminal": True,
+                "lanes_count": LANES_COUNT,
+                "initial_lane_id": (LANES_COUNT // 2),
+
             }
             
         )
@@ -60,12 +65,6 @@ class MultiHighway(Env):
             new_obs[agent.name]=o
         new_obs=gymnasium.spaces.Dict(*new_obs)
         print(new_obs," after wrapping\n\n")
-
-        # if car is out of bounds, terminate
-        for i in range(len(observation)):
-            if observation[i][0] < 0 or observation[i][0] > 60:
-                terminated = True
-                break
         
         return new_obs, reward, terminated, truncated, info
 
