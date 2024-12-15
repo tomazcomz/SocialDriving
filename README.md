@@ -13,7 +13,7 @@ Follow the steps below to set up and run the Social Driving project on your loca
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/tomazcomz/SocialDriving/tree/main
+   git clone https://github.com/tomazcomz/SocialDriving.git
    ```
 
 2. Navigate to the project directory:
@@ -33,9 +33,9 @@ Follow the steps below to set up and run the Social Driving project on your loca
 
 ---
 
-## Running Considerations
+## Running MAPPO
 
-To execute the Highway Env with the MAPPO run the script as follows:
+To execute the multi-agent setting in Highway Env with the MAPPO run the script as follows:
 
 `python -m MA_highway  --num_agents=[n] --num_episodes=[m]`
 
@@ -43,8 +43,22 @@ All available parameters are found in util/default_args.py, including model load
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
+## Running MADQN
 
+To execute the multi-agent setting in Highway Env with the DQN model run the script as follows with or without the arguments described below:
 
+```python decentralized_dqn.py```
+
+argument list:
+
+```
+--load_model: load an existing model, by default False
+--only_agents: choose to train only ego vehicles and no other cars, by default False
+--render: whether or not to visually display the environment, by default False
+--lr: set the desired learning rate, by default 1e-5
+--batch_size: set the batch size for learning, by default 256
+--max_eps: set the maximum number of episodes, by default 100000
+```
 
 ## References:
 
@@ -67,7 +81,7 @@ The DQN implementation follows thoroughly:
   author = {Adam Paszke},
   title = {Reinforcement Learning (Q-Learning) Tutorial},
   year = {n.d.},
-  url = {https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html%7D},
+  url = {https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html},
   note = {Accessed: 2024-12-15}
 }
 ```
